@@ -10,6 +10,8 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 # --- PATHS (Windows) ---
 BRAZIL_CSV = Path(r"C:\Users\Nathalie\neue projekte\urban-heat-island-ml\data\raw\Sample_Brazil_uhi_data.csv")
@@ -40,37 +42,51 @@ def get_lat_lon_columns(df: pd.DataFrame) -> tuple[str, str]:
     return lat_col, lon_col
 
 
-def add_building_count_features(
+def add_building_features(
     df_points: pd.DataFrame,
     buildings_gdf: gpd.GeoDataFrame,
     lat_col: str,
     lon_col: str,
     radii_m: list[int],
 ) -> pd.DataFrame:
-    """Compute number of building polygons within each radius around each point."""
+    """Compute building count and total building area (m²) within each radius around each point."""
     points = gpd.GeoDataFrame(
         df_points.copy(),
         geometry=gpd.points_from_xy(df_points[lon_col], df_points[lat_col]),
         crs="EPSG:4326",
     )
 
-    # Project to meters for buffering (baseline choice)
+    # Project to meters
     points_m = points.to_crs(epsg=3857)
-    buildings_m = buildings_gdf.to_crs(epsg=3857)
+    buildings_m = buildings_gdf.to_crs(epsg=3857).copy()
 
-    # Output table (no geometry)
+    # Building area in m² (because CRS is meters)
+    buildings_m["bldg_area_m2"] = buildings_m.geometry.area
+
     out = pd.DataFrame(points_m.drop(columns="geometry"))
 
     for r in radii_m:
         buffers = points_m[["geometry"]].copy()
         buffers["geometry"] = points_m.geometry.buffer(r)
 
-        joined = gpd.sjoin(buildings_m, buffers, predicate="within", how="inner")
+        joined = gpd.sjoin(
+            buildings_m[["geometry", "bldg_area_m2"]],
+            buffers,
+            predicate="within",
+            how="inner",
+        )
+
+        # Count buildings per point
         counts = joined.groupby("index_right").size()
 
-        col = f"bldg_count_{r}m"
-        out[col] = 0
-        out.loc[counts.index, col] = counts.values
+        # Sum building areas per point
+        area_sum = joined.groupby("index_right")["bldg_area_m2"].sum()
+
+        out[f"bldg_count_{r}m"] = 0
+        out.loc[counts.index, f"bldg_count_{r}m"] = counts.values
+
+        out[f"bldg_area_m2_{r}m"] = 0.0
+        out.loc[area_sum.index, f"bldg_area_m2_{r}m"] = area_sum.values
 
     return out
 
@@ -93,11 +109,12 @@ def main() -> None:
     buildings = gpd.read_file(shp_path)
 
     # 4) Build features
-    df_feat = add_building_count_features(df_s, buildings, lat_col, lon_col, RADII_M)
+    df_feat = add_building_features(df_s, buildings, lat_col, lon_col, RADII_M)
 
-    feature_cols = [f"bldg_count_{r}m" for r in RADII_M]
-    print("Feature columns expected:", feature_cols)
-    print("Columns available:", list(df_feat.columns))
+    feature_cols = []
+    for r in RADII_M:
+        feature_cols.append(f"bldg_count_{r}m")
+        feature_cols.append(f"bldg_area_m2_{r}m")
 
     # 5) Prepare ML arrays
     X = df_feat[feature_cols].astype(float).values
@@ -119,7 +136,12 @@ def main() -> None:
     )
 
     # 6) Baseline model
-    clf = LogisticRegression(max_iter=1000, class_weight="balanced")
+    clf = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=5000, class_weight="balanced")),
+        ]
+    )
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)
@@ -136,7 +158,7 @@ def main() -> None:
     out_dir = Path("outputs") / "tables"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    tag = "_".join([f"{r}m" for r in RADII_M])
+    tag = "_".join([f"{r}m" for r in RADII_M]) + "_count_area"
     df_feat.to_csv(out_dir / f"brazil_sample_{len(df_s)}_bldgcount_{tag}.csv", index=False)
 
     cm_df = pd.DataFrame(

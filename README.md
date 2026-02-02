@@ -41,3 +41,16 @@ Visualizations are used to relate predictions to urban structures.
 ## Motivation
 This project is part of a personal portfolio focused on
 machine learning applications for climate adaptation in cities.
+
+## Baseline results (Brazil, building features)
+
+A logistic regression baseline using multi-scale building density (50m / 100m / 200m) 
+and building footprint area achieves:
+
+- Accuracy: ~0.51
+- Macro F1-score: ~0.45
+
+Low-UHI areas are identified reliably, while Medium-UHI remains challenging, 
+indicating that additional environmental features (e.g. vegetation or surface properties) 
+are required.
+
