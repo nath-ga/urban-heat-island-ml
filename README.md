@@ -12,26 +12,33 @@ Urban heat islands increase health risks, energy consumption, and reduce quality
 Identifying heat-prone areas can support targeted urban planning measures such as
 tree planting, shading, and surface de-sealing.
 
-## Data
-The dataset is provided by the competition organizers and includes
-geospatial and environmental features related to urban areas.
-Raw data is stored unchanged in `data/raw/`.
-
 ## Approach
-- Exploratory data analysis to understand spatial and feature patterns
-- Feature preprocessing and basic feature engineering
-- Baseline supervised classification model
-- Evaluation with appropriate metrics
-- Visualization of predicted heat island areas
+- Geospatial feature engineering using building footprints and road networks
+- Multi-scale spatial context (50m / 100m / 200m buffers)
+- Supervised baseline classification (logistic regression)
+- Emphasis on interpretability and incremental feature refinement
+- Evaluation using accuracy and class-balanced metrics
 
 ## Results
-This project prioritizes explainable results over maximum accuracy.
-Visualizations are used to relate predictions to urban structures.
+The project prioritizes explainable results over maximum accuracy.
+
+A stepwise feature refinement approach was applied:
+- Multi-scale building density and footprint area
+- Road length features derived from OpenStreetMap
+- Refined road length calculation using clipped geometries for the largest spatial context (200m)
+
+This resulted in a steady performance improvement, reaching:
+- Accuracy: ~0.55
+- Macro F1-score: ~0.50
+
+Low-UHI areas are identified reliably, while Medium-UHI remains challenging,
+indicating transitional zones and the need for additional environmental features.
 
 ## Limitations
-- No hyperparameter optimization for competition ranking
-- Limited domain-specific calibration
-- Results are indicative, not operational
+- Baseline models without extensive hyperparameter optimization
+- Simplified proxies for urban surface properties
+- Medium UHI class represents transitional areas and is harder to separate
+- Results are indicative and not intended for operational deployment
 
 ## Possible Extensions
 - Integration of vegetation and water proximity features

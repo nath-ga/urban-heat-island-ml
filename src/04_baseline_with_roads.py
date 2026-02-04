@@ -136,6 +136,51 @@ def add_road_length_features_mvp(
 
     return out
 
+def add_road_length_200m_clipped(
+    df_points: pd.DataFrame,
+    roads_gdf: gpd.GeoDataFrame,
+    lat_col: str,
+    lon_col: str,
+) -> pd.Series:
+    """
+    Compute clipped road length (meters) within 200m buffer for each point.
+    """
+    points = gpd.GeoDataFrame(
+        df_points.copy(),
+        geometry=gpd.points_from_xy(df_points[lon_col], df_points[lat_col]),
+        crs="EPSG:4326",
+    )
+
+    points_m = points.to_crs(epsg=3857)
+    roads_m = roads_gdf.to_crs(epsg=3857)
+
+    buffers = gpd.GeoDataFrame(
+        index=points_m.index,
+        geometry=points_m.geometry.buffer(200),
+        crs=points_m.crs,
+    )
+
+    joined = gpd.sjoin(
+        roads_m[["geometry"]],
+        buffers[["geometry"]],
+        predicate="intersects",
+        how="inner",
+    )
+
+    joined = joined.join(
+        buffers.rename(columns={"geometry": "buffer_geom"}),
+        on="index_right",
+    )
+
+    inter = joined.geometry.intersection(joined["buffer_geom"])
+    inter_len = inter.length
+
+    road_sum = inter_len.groupby(joined["index_right"]).sum()
+
+    # return as Series aligned to points
+    out = pd.Series(0.0, index=points_m.index, name="road_len_m_200m_clipped")
+    out.loc[road_sum.index] = road_sum.values
+    return out
 
 def main() -> None:
     t0 = time.time()
@@ -161,6 +206,12 @@ def main() -> None:
     # 4) Build features
     df_bldg = add_building_features(df_s, buildings, lat_col, lon_col, RADII_M)
     df_roads = add_road_length_features_mvp(df_s, roads, lat_col, lon_col, RADII_M)
+
+    road_200m_clipped = add_road_length_200m_clipped(
+        df_s, roads, lat_col, lon_col
+    )
+
+    df_roads["road_len_m_200m"] = road_200m_clipped.values
 
     # Join by index (same sampled rows)
     road_cols = [f"road_len_m_{r}m" for r in RADII_M]
