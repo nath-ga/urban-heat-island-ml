@@ -3,6 +3,10 @@ from pathlib import Path
 
 import pandas as pd
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 try:
     import geopandas as gpd
 except Exception as e:
@@ -20,9 +24,12 @@ print("Python:", sys.version.split()[0])
 print("GeoPandas:", gpd.__version__)
 print("Shapely available:", shapely_ok)
 
-# --- YOUR PATHS (Windows) ---
-BRAZIL_CSV = Path(r"C:\Users\Nathalie\neue projekte\urban-heat-island-ml\data\raw\Sample_Brazil_uhi_data.csv")
-BRAZIL_BUILDINGS_FOLDER = Path(r"C:\Users\Nathalie\neue projekte\urban-heat-island-ml\data\raw\Brazil Building Footprints")
+DATA_DIR = PROJECT_ROOT / "data"
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+
+BRAZIL_CSV = RAW_DIR / "Sample_Brazil_uhi_data.csv"
+BRAZIL_BUILDINGS_FOLDER = RAW_DIR / "Brazil Building Footprints"
 
 print("\nBrazil CSV:", BRAZIL_CSV)
 print("Exists:", BRAZIL_CSV.exists())

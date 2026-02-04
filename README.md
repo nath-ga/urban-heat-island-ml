@@ -54,3 +54,12 @@ Low-UHI areas are identified reliably, while Medium-UHI remains challenging,
 indicating that additional environmental features (e.g. vegetation or surface properties) 
 are required.
 
+## Data
+Raw training data is not included in this repository.
+
+Expected structure:
+data/
+├─ raw/
+│  ├─ Sample_Brazil_uhi_data.csv
+│  └─ Brazil Building Footprints/
+│     └─ *.shp
