@@ -34,6 +34,17 @@ This resulted in a steady performance improvement, reaching:
 Low-UHI areas are identified reliably, while Medium-UHI remains challenging,
 indicating transitional zones and the need for additional environmental features.
 
+## Visualization
+
+The figure below shows a spatial overview of the model predictions
+for the Brazil sample dataset. Points are colored by predicted
+Urban Heat Island class (Low / Medium / High).
+
+This visualization highlights how the model responds to
+urban structure, road density, and built-up areas.
+
+![UHI prediction overview](docs/uhi_prediction_overview.png)
+
 ## Limitations
 - Baseline models without extensive hyperparameter optimization
 - Simplified proxies for urban surface properties
